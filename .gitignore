@@ -9,7 +9,7 @@ stllib/
 .idea/
 # C extensions
 *.so
-
+download/
 # Distribution / packaging
 .Python
 build/
