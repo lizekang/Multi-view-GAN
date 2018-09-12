@@ -93,20 +93,18 @@ optimizer_G = torch.optim.Adam(generator.parameters(), lr=opt.lr, betas=(opt.b1,
 optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=opt.lr, betas=(opt.b1, opt.b2))
 
 # Configure dataloaders
-# train_transforms = [transforms.Resize(int(1.12*opt.img_height), Image.BICUBIC),
-#                     transforms.RandomCrop(opt.img_height),
-#                     transforms.RandomHorizontalFlip(),
-#                     transforms.ToTensor(),
-#                     transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5)) ]
+train_transforms = [transforms.Resize((opt.img_height, opt.img_width), Image.BICUBIC),
+                    transforms.ToTensor(),
+                    transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5)) ]
 
-dataloader = DataLoader(MultiViewDataset(opt.data_path, batch_size=opt.batch_size, train_step=opt.train_step),
+dataloader = DataLoader(MultiViewDataset(opt.data_path, batch_size=opt.batch_size, train_step=opt.train_step, transform=train_transforms),
                         batch_size=opt.batch_size, shuffle=True, num_workers=opt.n_cpu)
 
-# val_transforms = [  transforms.Resize((opt.img_height, opt.img_width), Image.BICUBIC),
-#                     transforms.ToTensor(),
-#                     transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5)) ]
+val_transforms = [  transforms.Resize((opt.img_height, opt.img_width), Image.BICUBIC),
+                    transforms.ToTensor(),
+                    transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5)) ]
 
-val_dataloader = DataLoader(MultiViewDataset(opt.data_path, batch_size=10, train_step=opt.test_step),
+val_dataloader = DataLoader(MultiViewDataset(opt.data_path, batch_size=10, train_step=opt.test_step, transform=val_transforms),
                             batch_size=10, shuffle=True, num_workers=1)
 
 # Tensor type

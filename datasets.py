@@ -10,7 +10,7 @@ import torchvision.transforms as transforms
 
 
 class MultiViewDataset(torch.utils.data.Dataset):  # 继承的torch.utils.data.Dataset
-    def __init__(self, path, batch_size, train_step):  # 初始化一些需要传入的参数
+    def __init__(self, path, batch_size, train_step, transform=None):  # 初始化一些需要传入的参数
         f = open(path, 'r')
         self.img_class_dict = {}
         for line in f:
@@ -23,12 +23,16 @@ class MultiViewDataset(torch.utils.data.Dataset):  # 继承的torch.utils.data.D
 
         self.batch_size = batch_size
         self.train_step = train_step
+        self.transform = transform
 
     def __getitem__(self, index):
         class_index = random.choice(list(self.img_class_dict.keys()))
 
         img_list = random.sample(self.img_class_dict[class_index], 6)
-        img1, img2, img3, img4, img5, real_img = [np.array(Image.open(i[0])) for i in img_list]
+        if transforms is not None:
+            img1, img2, img3, img4, img5, real_img = [self.transform(Image.open(i[0])) for i in img_list]
+        else:
+            img1, img2, img3, img4, img5, real_img = [np.array(Image.open(i[0])) for i in img_list]
         label = img_list[-1][1]
 
         return img1, img2, img3, img4, img5, real_img, label
