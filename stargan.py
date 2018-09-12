@@ -34,6 +34,7 @@ parser.add_argument('--test_step', type=int, default=10, help='epoch to start tr
 parser.add_argument('--n_train_step', type=int, default=200, help='number of epochs of training')
 parser.add_argument('--data_path', type=str, default="list.txt", help='number of epochs of training')
 parser.add_argument('--batch_size', type=int, default=16, help='size of the batches')
+parser.add_argument('--retrain', type=bool, default=False, help='if retrain')
 parser.add_argument('--lr', type=float, default=0.0002, help='adam: learning rate')
 parser.add_argument('--b1', type=float, default=0.5, help='adam: decay of first order momentum of gradient')
 parser.add_argument('--b2', type=float, default=0.999, help='adam: decay of first order momentum of gradient')
@@ -80,7 +81,7 @@ if cuda:
     discriminator = discriminator.cuda()
     criterion_cycle.cuda()
 
-if opt.epoch != 0:
+if not opt.retrain:
     # Load pretrained models
     generator.load_state_dict(torch.load('saved_models/generator.pth'))
     discriminator.load_state_dict(torch.load('saved_models/discriminator.pth'))
