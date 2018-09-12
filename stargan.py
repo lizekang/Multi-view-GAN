@@ -180,7 +180,7 @@ for i, (img1, img2, img3, img4, img5, real_image, label) in enumerate(dataloader
     # Sample labels as generator inputs
     sampled_c = Variable(Tensor(np.random.randint(0, 648, (real_images.size(0), c_dim))))
     # Generate fake batch of images
-    fake_imgs = generator(img1, img2, img3, img4, img5, sampled_c)
+    fake_imgs = generator(imgs1, imgs2, imgs3, imgs4, imgs5, sampled_c)
 
     # ---------------------
     #  Train Discriminator
@@ -214,7 +214,7 @@ for i, (img1, img2, img3, img4, img5, real_image, label) in enumerate(dataloader
         # -----------------
 
         # Translate and reconstruct image
-        gen_imgs = generator(img1, img2, img3, img4, img5, sampled_c)
+        gen_imgs = generator(imgs1, imgs2, imgs3, imgs4, imgs5, sampled_c)
         recov_imgs = generator(gen_imgs, labels)
         # Discriminator evaluates translated image
         fake_validity, pred_cls = discriminator(gen_imgs)
@@ -223,7 +223,7 @@ for i, (img1, img2, img3, img4, img5, real_image, label) in enumerate(dataloader
         # Classification loss
         loss_G_cls = criterion_cls(pred_cls, sampled_c)
         # Reconstruction loss
-        loss_G_rec = criterion_cycle(recov_imgs, real_image)
+        loss_G_rec = criterion_cycle(recov_imgs, real_images)
         # Total loss
         loss_G = loss_G_adv + lambda_cls * loss_G_cls + lambda_rec * loss_G_rec
 

@@ -23,7 +23,7 @@ class MultiViewDataset(torch.utils.data.Dataset):  # 继承的torch.utils.data.D
 
         self.batch_size = batch_size
         self.train_step = train_step
-        self.transform = transform
+        self.transform = transforms.Compose(transform)
 
     def __getitem__(self, index):
         class_index = random.choice(list(self.img_class_dict.keys()))
