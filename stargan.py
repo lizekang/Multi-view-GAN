@@ -43,7 +43,7 @@ parser.add_argument('--n_cpu', type=int, default=8, help='number of cpu threads 
 parser.add_argument('--img_height', type=int, default=128, help='size of image height')
 parser.add_argument('--img_width', type=int, default=128, help='size of image width')
 parser.add_argument('--channels', type=int, default=3, help='number of image channels')
-parser.add_argument('--n_views', type=int, default=10, help='number of views')
+parser.add_argument('--c_dims', type=int, default=100, help='number of views')
 parser.add_argument('--sample_interval', type=int, default=100,
                     help='interval between sampling of images from generators')
 parser.add_argument('--checkpoint_interval', type=int, default=100, help='interval between model checkpoints')
@@ -54,7 +54,7 @@ opt = parser.parse_args()
 print(opt)
 
 writer = SummaryWriter(opt.summary_path)
-c_dim = int(opt.n_views)
+c_dim = int(opt.c_dims)
 img_shape = (opt.channels, opt.img_height, opt.img_width)
 
 cuda = True if torch.cuda.is_available() else False
@@ -179,7 +179,8 @@ for i, (img1, img2, img3, img4, img5, real_image, label) in enumerate(dataloader
     labels = Variable(label.type(Tensor))
 
     # Sample labels as generator inputs
-    sampled_c = Variable(Tensor(np.random.randint(0, 2, (real_images.size(0), c_dim))))
+    # sampled_c = Variable(Tensor(np.random.randint(0, 2, (real_images.size(0), c_dim))))
+    sampled_c = Variable(Tensor(np.random.normal(0, 1, (real_images.size(0), c_dim))))
     # Generate fake batch of images
     fake_imgs = generator(imgs1, imgs2, imgs3, imgs4, imgs5, sampled_c)
 
@@ -190,7 +191,8 @@ for i, (img1, img2, img3, img4, img5, real_image, label) in enumerate(dataloader
     optimizer_D.zero_grad()
 
     # Real images
-    real_validity, pred_cls = discriminator(real_images)
+    # real_validity, pred_cls = discriminator(real_images)
+    real_validity, _ = discriminator(real_images)
     # Fake images
     fake_validity, _ = discriminator(fake_imgs.detach())
     # Gradient penalty
@@ -198,10 +200,10 @@ for i, (img1, img2, img3, img4, img5, real_image, label) in enumerate(dataloader
     # Adversarial loss
     loss_D_adv = - torch.mean(real_validity) + torch.mean(fake_validity) + lambda_gp * gradient_penalty
     # Classification loss
-    loss_D_cls = criterion_cls(pred_cls, labels)
+    # loss_D_cls = criterion_cls(pred_cls, labels)
     # Total loss
-    loss_D = loss_D_adv + lambda_cls * loss_D_cls
-
+    # loss_D = loss_D_adv + lambda_cls * loss_D_cls
+    loss_D = loss_D_adv
     loss_D.backward()
     optimizer_D.step()
 
@@ -218,15 +220,17 @@ for i, (img1, img2, img3, img4, img5, real_image, label) in enumerate(dataloader
         gen_imgs = generator(imgs1, imgs2, imgs3, imgs4, imgs5, sampled_c)
         recov_imgs = generator(gen_imgs, labels)
         # Discriminator evaluates translated image
-        fake_validity, pred_cls = discriminator(gen_imgs)
+        # fake_validity, pred_cls = discriminator(gen_imgs)
+        fake_validity, _ = discriminator(gen_imgs)
         # Adversarial loss
         loss_G_adv = -torch.mean(fake_validity)
         # Classification loss
-        loss_G_cls = criterion_cls(pred_cls, sampled_c)
+        # loss_G_cls = criterion_cls(pred_cls, sampled_c)
         # Reconstruction loss
         loss_G_rec = criterion_cycle(recov_imgs, real_images)
         # Total loss
-        loss_G = loss_G_adv + lambda_cls * loss_G_cls + lambda_rec * loss_G_rec
+        # loss_G = loss_G_adv + lambda_cls * loss_G_cls + lambda_rec * loss_G_rec
+        loss_G = loss_G_adv + lambda_rec * loss_G_rec
 
         loss_G.backward()
         optimizer_G.step()
