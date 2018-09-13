@@ -148,7 +148,7 @@ def sample_images(steps_done):
         labels = label.repeat(8, 1)
         # Make changes to labels
         for j in range(8):
-            labels[j] = random.randint(c_dim)
+            labels[j] = np.random.normal(0, 1, c_dim)
 
         # Generate translations
         gen_imgs = generator(img1, img2, img3, img4, img5, labels)
