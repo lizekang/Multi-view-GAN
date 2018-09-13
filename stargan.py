@@ -150,7 +150,7 @@ def sample_images(steps_done):
         img4 = img4.repeat(8, 1, 1, 1)
         img5 = img5.repeat(8, 1, 1, 1)
         # Make changes to labels
-        labels = Variable(Tensor(np.random.normal(0, 1, (10, c_dim))))
+        labels = Variable(Tensor(np.random.normal(0, 1, (8, c_dim))))
         # Generate translations
 
         gen_imgs = generator(img1, img2, img3, img4, img5, labels)

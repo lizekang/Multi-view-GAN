@@ -10,7 +10,7 @@ stllib/
 # C extensions
 *.so
 download/
-save_models/
+saved_models/
 images/
 summary/
 # Distribution / packaging
