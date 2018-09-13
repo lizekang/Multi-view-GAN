@@ -144,10 +144,13 @@ def sample_images(steps_done):
         img1, img2, img3, img4, img5, real_image, label = val_imgs1[i], val_imgs2[i], val_imgs3[i], val_imgs4[i], \
                                                           val_imgs5[i], val_real_images[i], val_labels[i]
         # Repeat for number of label changes
-        imgs = real_image.repeat(8, 1, 1, 1)
+        img1 = img1.repeat(8, 1, 1, 1)
+        img2 = img2.repeat(8, 1, 1, 1)
+        img3 = img3.repeat(8, 1, 1, 1)
+        img4 = img4.repeat(8, 1, 1, 1)
+        img5 = img5.repeat(8, 1, 1, 1)
         # Make changes to labels
         labels = Variable(Tensor(np.random.normal(0, 1, (10, c_dim))))
-        print(labels.size())
         # Generate translations
 
         gen_imgs = generator(img1, img2, img3, img4, img5, labels)
