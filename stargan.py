@@ -145,12 +145,11 @@ def sample_images(steps_done):
                                                           val_imgs5[i], val_real_images[i], val_labels[i]
         # Repeat for number of label changes
         imgs = real_image.repeat(8, 1, 1, 1)
-        labels = label.repeat(8, 1)
         # Make changes to labels
-        for j in range(8):
-            labels[j] = np.random.normal(0, 1, c_dim)
-
+        labels = Variable(Tensor(np.random.normal(0, 1, (10, c_dim))))
+        print(labels.size())
         # Generate translations
+
         gen_imgs = generator(img1, img2, img3, img4, img5, labels)
         # Concatenate images by width
         gen_imgs = torch.cat([x for x in gen_imgs.data], -1)
