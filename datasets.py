@@ -30,9 +30,9 @@ class MultiViewDataset(torch.utils.data.Dataset):  # 继承的torch.utils.data.D
 
         img_list = random.sample(self.img_class_dict[class_index], 6)
         if transforms is not None:
-            img1, img2, img3, img4, img5, real_img = [self.transform(Image.open(i[0])) for i in img_list]
+            img1, img2, img3, img4, img5, real_img = [self.transform(Image.open(i[0]))[:3,:,:] for i in img_list]
         else:
-            img1, img2, img3, img4, img5, real_img = [np.array(Image.open(i[0])) for i in img_list]
+            img1, img2, img3, img4, img5, real_img = [np.array(Image.open(i[0]))[:3,:,:] for i in img_list]
         label = img_list[-1][1]
 
         return img1, img2, img3, img4, img5, real_img, label

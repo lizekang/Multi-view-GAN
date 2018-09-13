@@ -43,7 +43,7 @@ parser.add_argument('--n_cpu', type=int, default=8, help='number of cpu threads 
 parser.add_argument('--img_height', type=int, default=128, help='size of image height')
 parser.add_argument('--img_width', type=int, default=128, help='size of image width')
 parser.add_argument('--channels', type=int, default=3, help='number of image channels')
-parser.add_argument('--n_views', type=int, default=648, help='number of views')
+parser.add_argument('--n_views', type=int, default=10, help='number of views')
 parser.add_argument('--sample_interval', type=int, default=100,
                     help='interval between sampling of images from generators')
 parser.add_argument('--checkpoint_interval', type=int, default=100, help='interval between model checkpoints')
@@ -116,6 +116,7 @@ def compute_gradient_penalty(D, real_samples, fake_samples):
     # Random weight term for interpolation between real and fake samples
     alpha = Tensor(np.random.random((real_samples.size(0), 1, 1, 1)))
     # Get random interpolation between real and fake samples
+    print(alpha.size(), real_samples.size(), fake_samples.size())
     interpolates = (alpha * real_samples + ((1 - alpha) * fake_samples)).requires_grad_(True)
     d_interpolates, _ = D(interpolates)
     fake = Variable(Tensor(np.ones(d_interpolates.shape)), requires_grad=False)
@@ -178,7 +179,7 @@ for i, (img1, img2, img3, img4, img5, real_image, label) in enumerate(dataloader
     labels = Variable(label.type(Tensor))
 
     # Sample labels as generator inputs
-    sampled_c = Variable(Tensor(np.random.randint(0, 648, (real_images.size(0), c_dim))))
+    sampled_c = Variable(Tensor(np.random.randint(0, 2, (real_images.size(0), c_dim))))
     # Generate fake batch of images
     fake_imgs = generator(imgs1, imgs2, imgs3, imgs4, imgs5, sampled_c)
 
