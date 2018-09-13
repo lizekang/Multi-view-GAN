@@ -144,19 +144,19 @@ def sample_images(steps_done):
         img1, img2, img3, img4, img5, real_image, label = val_imgs1[i], val_imgs2[i], val_imgs3[i], val_imgs4[i], \
                                                           val_imgs5[i], val_real_images[i], val_labels[i]
         # Repeat for number of label changes
-        img1 = img1.repeat(8, 1, 1, 1)
-        img2 = img2.repeat(8, 1, 1, 1)
-        img3 = img3.repeat(8, 1, 1, 1)
-        img4 = img4.repeat(8, 1, 1, 1)
-        img5 = img5.repeat(8, 1, 1, 1)
+        imgs1 = img1.repeat(8, 1, 1, 1)
+        imgs2 = img2.repeat(8, 1, 1, 1)
+        imgs3 = img3.repeat(8, 1, 1, 1)
+        imgs4 = img4.repeat(8, 1, 1, 1)
+        imgs5 = img5.repeat(8, 1, 1, 1)
         # Make changes to labels
         labels = Variable(Tensor(np.random.normal(0, 1, (8, c_dim))))
         # Generate translations
 
-        gen_imgs = generator(img1, img2, img3, img4, img5, labels)
+        gen_imgs = generator(imgs1, imgs2, imgs3, imgs4, imgs5, labels)
         # Concatenate images by width
         gen_imgs = torch.cat([x for x in gen_imgs.data], -1)
-        img_sample = torch.cat((real_image.data, gen_imgs), -1)
+        img_sample = torch.cat([img1.data, img2.data, img3.data, img4.data, img5.data, gen_imgs], -1)
         # Add as row to generated samples
         img_samples = img_sample if img_samples is None else torch.cat((img_samples, img_sample), -2)
 
