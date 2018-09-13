@@ -68,17 +68,9 @@ class GeneratorResNet(nn.Module):
 
     def forward(self, img1, img2, img3, img4, img5, c):
         c = c.view(c.size(0), c.size(1), 1, 1)
-        print(c.size())
         c = c.repeat(1, 1, img1.size(2), img1.size(3))
-        print(c.size())
-        x1 = torch.cat((img1, c), 1)
-        x2 = torch.cat((img2, c), 1)
-        x3 = torch.cat((img3, c), 1)
-        x4 = torch.cat((img4, c), 1)
-        x5 = torch.cat((img5, c), 1)
-        print(x1.size())
-        print(self.downmodel(x1).size())
-        x = torch.cat([self.downmodel(x1), self.downmodel(x2), self.downmodel(x3), self.downmodel(x4), self.downmodel(x5)], 1)
+        x = torch.cat([img1, img2, img3, img4, img5, c], 1)
+        x = self.downmodel(x)
         return self.upmodel(x)
 
 
