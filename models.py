@@ -30,7 +30,7 @@ class ResidualBlock(nn.Module):
 
 
 class GeneratorResNet(nn.Module):
-    def __init__(self, img_shape=(3, 128, 128), res_blocks=9, c_dim=5):
+    def __init__(self, img_shape=(15, 128, 128), res_blocks=9, c_dim=10):
         super(GeneratorResNet, self).__init__()
         channels, img_size, _ = img_shape
 
@@ -50,7 +50,6 @@ class GeneratorResNet(nn.Module):
         # Residual blocks
         for _ in range(res_blocks):
             model1 += [ResidualBlock(curr_dim)]
-        curr_dim *= 5
 
         # Upsampling
         model2 = []
@@ -61,7 +60,7 @@ class GeneratorResNet(nn.Module):
             curr_dim = curr_dim // 2
 
         # Output layer
-        model2 += [nn.Conv2d(curr_dim, channels, 7, stride=1, padding=3),
+        model2 += [nn.Conv2d(curr_dim, 3, 7, stride=1, padding=3),
                   nn.Tanh()]
         self.downmodel = nn.Sequential(*model1)
         self.upmodel = nn.Sequential(*model2)
