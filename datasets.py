@@ -27,14 +27,14 @@ class MultiViewDataset(torch.utils.data.Dataset):  # 继承的torch.utils.data.D
     def __getitem__(self, index):
         class_index = random.choice(list(self.img_class_dict.keys()))
 
-        img_list = random.sample(self.img_class_dict[class_index], 6)
+        img_list = random.sample(self.img_class_dict[class_index], 4)
         if transforms is not None:
-            img1, img2, img3, img4, img5, real_img = [self.transform(Image.open(i[0]))[:3,:,:] for i in img_list]
+            img1, img2, img3, real_img = [self.transform(Image.open(i[0]))[:3,:,:] for i in img_list]
         else:
-            img1, img2, img3, img4, img5, real_img = [np.array(Image.open(i[0]))[:3,:,:] for i in img_list]
-        label = img_list[-1][1]
+            img1, img2, img3, real_img = [np.array(Image.open(i[0]))[:3,:,:] for i in img_list]
+        label = np.eye(15)[img_list[-1][1]]
 
-        return img1, img2, img3, img4, img5, real_img, label
+        return img1, img2, img3, real_img, label
 
     def __len__(self):  # 这个函数也必须要写，它返回的是数据集的长度，也就是多少张图片，要和loader的长度作区分
         return self.batch_size * self.train_step

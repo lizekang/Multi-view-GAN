@@ -40,10 +40,10 @@ parser.add_argument('--b1', type=float, default=0.5, help='adam: decay of first 
 parser.add_argument('--b2', type=float, default=0.999, help='adam: decay of first order momentum of gradient')
 parser.add_argument('--decay_epoch', type=int, default=100, help='epoch from which to start lr decay')
 parser.add_argument('--n_cpu', type=int, default=8, help='number of cpu threads to use during batch generation')
-parser.add_argument('--img_height', type=int, default=128, help='size of image height')
-parser.add_argument('--img_width', type=int, default=128, help='size of image width')
+parser.add_argument('--img_height', type=int, default=512, help='size of image height')
+parser.add_argument('--img_width', type=int, default=512, help='size of image width')
 parser.add_argument('--channels', type=int, default=15, help='number of image channels')
-parser.add_argument('--c_dims', type=int, default=10, help='number of views')
+parser.add_argument('--c_dims', type=int, default=15, help='number of views')
 parser.add_argument('--sample_interval', type=int, default=100,
                     help='interval between sampling of images from generators')
 parser.add_argument('--checkpoint_interval', type=int, default=100, help='interval between model checkpoints')
@@ -116,7 +116,6 @@ def compute_gradient_penalty(D, real_samples, fake_samples):
     # Random weight term for interpolation between real and fake samples
     alpha = Tensor(np.random.random((real_samples.size(0), 1, 1, 1)))
     # Get random interpolation between real and fake samples
-    print(alpha.size(), real_samples.size(), fake_samples.size())
     interpolates = (alpha * real_samples + ((1 - alpha) * fake_samples)).requires_grad_(True)
     d_interpolates, _ = D(interpolates)
     fake = Variable(Tensor(np.ones(d_interpolates.shape)), requires_grad=False)
@@ -150,7 +149,7 @@ def sample_images(steps_done):
         imgs4 = img4.repeat(8, 1, 1, 1)
         imgs5 = img5.repeat(8, 1, 1, 1)
         # Make changes to labels
-        labels = Variable(Tensor(np.random.normal(0, 1, (8, c_dim))))
+        labels = Variable(Tensor(np.random.randint(0, 1, (8, c_dim))))
         # Generate translations
 
         gen_imgs = generator(imgs1, imgs2, imgs3, imgs4, imgs5, labels)
@@ -169,22 +168,20 @@ def sample_images(steps_done):
 
 saved_samples = []
 start_time = time.time()
-for i, (img1, img2, img3, img4, img5, real_image, label) in enumerate(dataloader):
+for i, (img1, img2, img3, real_image, label) in enumerate(dataloader):
 
     # Model inputs
     imgs1 = Variable(img1.type(Tensor))
     imgs2 = Variable(img2.type(Tensor))
     imgs3 = Variable(img3.type(Tensor))
-    imgs4 = Variable(img4.type(Tensor))
-    imgs5 = Variable(img5.type(Tensor))
     real_images = Variable(real_image.type(Tensor))
     labels = Variable(label.type(Tensor))
 
     # Sample labels as generator inputs
-    # sampled_c = Variable(Tensor(np.random.randint(0, 2, (real_images.size(0), c_dim))))
-    sampled_c = Variable(Tensor(np.random.normal(0, 1, (real_images.size(0), c_dim))))
+    sampled_c = Variable(Tensor(np.random.randint(0, 2, (real_images.size(0), c_dim))))
+    # sampled_c = Variable(Tensor(np.random.normal(0, 1, (real_images.size(0), c_dim))))
     # Generate fake batch of images
-    fake_imgs = generator(imgs1, imgs2, imgs3, imgs4, imgs5, sampled_c)
+    fake_imgs = generator(imgs1, imgs2, imgs3, sampled_c)
 
     # ---------------------
     #  Train Discriminator
@@ -193,8 +190,8 @@ for i, (img1, img2, img3, img4, img5, real_image, label) in enumerate(dataloader
     optimizer_D.zero_grad()
 
     # Real images
-    # real_validity, pred_cls = discriminator(real_images)
-    real_validity, _ = discriminator(real_images)
+    real_validity, pred_cls = discriminator(real_images)
+    # real_validity, _ = discriminator(real_images)
     # Fake images
     fake_validity, _ = discriminator(fake_imgs.detach())
     # Gradient penalty
@@ -202,10 +199,10 @@ for i, (img1, img2, img3, img4, img5, real_image, label) in enumerate(dataloader
     # Adversarial loss
     loss_D_adv = - torch.mean(real_validity) + torch.mean(fake_validity) + lambda_gp * gradient_penalty
     # Classification loss
-    # loss_D_cls = criterion_cls(pred_cls, labels)
+    loss_D_cls = criterion_cls(pred_cls, labels)
     # Total loss
-    # loss_D = loss_D_adv + lambda_cls * loss_D_cls
-    loss_D = loss_D_adv
+    loss_D = loss_D_adv + lambda_cls * loss_D_cls
+    # loss_D = loss_D_adv
     loss_D.backward()
     optimizer_D.step()
 
@@ -219,7 +216,7 @@ for i, (img1, img2, img3, img4, img5, real_image, label) in enumerate(dataloader
         # -----------------
 
         # Translate and reconstruct image
-        gen_imgs = generator(imgs1, imgs2, imgs3, imgs4, imgs5, sampled_c)
+        gen_imgs = generator(imgs1, imgs2, imgs3, sampled_c)
         # recov_imgs = generator(gen_imgs, labels)
         # Discriminator evaluates translated image
         # fake_validity, pred_cls = discriminator(gen_imgs)
