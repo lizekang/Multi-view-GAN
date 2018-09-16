@@ -14,8 +14,7 @@ class MultiViewDataset(torch.utils.data.Dataset):  # 继承的torch.utils.data.D
         f = open(path, 'r')
         self.img_class_dict = {}
         for line in f:
-            line = line.rstrip()
-            words = line.split(',')
+            words = line.split(' ')
             if int(words[1]) not in self.img_class_dict.keys():
                 self.img_class_dict[int(words[1])] = [(words[0], int(words[-1]))]
             else:
