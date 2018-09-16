@@ -13,6 +13,7 @@ download/
 saved_models/
 images/
 summary/
+3dplane/
 # Distribution / packaging
 .Python
 build/
