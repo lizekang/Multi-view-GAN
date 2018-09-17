@@ -13,22 +13,29 @@ import torchvision.transforms as transforms
 class MultiViewDataset(torch.utils.data.Dataset):  # 继承的torch.utils.data.Dataset
     def __init__(self, path, batch_size, train_step, transform=None):  # 初始化一些需要传入的参数
         f = open(path, 'r')
-        self.img_class_dict = {}
+        self.img_input_dict = {}
+        self.img_real_image = {}
         for line in f:
             words = line.split(' ')
-            if int(words[1]) not in self.img_class_dict.keys():
-                self.img_class_dict[int(words[1])] = [(words[0], int(words[-1]))]
+            if int(words[1]) not in self.img_input_dict.keys():
+                if int(words[2]) == 3 or int(words[2]) == 6 or int(words[2]) == 11:
+                    self.img_input_dict[int(words[1])] = [(words[0], int(words[-1]))]
+                else:
+                    self.img_real_image[int(words[1])] = [(words[0], int(words[-1]))]
             else:
-                self.img_class_dict[int(words[1])].append((words[0], int(words[-1])))
+                if int(words[2]) == 3 or int(words[2]) == 6 or int(words[2]) == 11:
+                    self.img_input_dict[int(words[1])].append((words[0], int(words[-1])))
+                else:
+                    self.img_real_image[int(words[1])].append((words[0], int(words[-1])))
 
         self.batch_size = batch_size
         self.train_step = train_step
         self.transform = transforms.Compose(transform)
 
     def __getitem__(self, index):
-        class_index = random.choice(list(self.img_class_dict.keys()))
+        class_index = random.choice(list(self.img_input_dict.keys()))
 
-        img_list = random.sample(self.img_class_dict[class_index], 4)
+        img_list = self.img_input_dict[class_index][:] + random.choice(self.img_real_image[class_index])
         if transforms is not None:
             img1, img2, img3, real_img = [self.transform(Image.open(i[0]))[:3,:,:] for i in img_list]
         else:
