@@ -24,9 +24,10 @@ import torch
 
 from tensorboardX import SummaryWriter
 
-os.makedirs('images', exist_ok=True)
-os.makedirs('saved_models', exist_ok=True)
-os.makedirs('summary', exist_ok=True)
+if not os.path.exists("images"):
+    os.makedirs('images')
+    os.makedirs('saved_models')
+    os.makedirs('summary')
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--train_step', type=int, default=100000, help='epoch to start training from')
