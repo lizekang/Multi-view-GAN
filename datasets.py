@@ -35,7 +35,7 @@ class MultiViewDataset(torch.utils.data.Dataset):  # 继承的torch.utils.data.D
     def __getitem__(self, index):
         class_index = random.choice(list(self.img_input_dict.keys()))
 
-        img_list = self.img_input_dict[class_index][:] + random.choice(self.img_real_image[class_index])
+        img_list = self.img_input_dict[class_index][:] + [random.choice(self.img_real_image[class_index])]
         if transforms is not None:
             img1, img2, img3, real_img = [self.transform(Image.open(i[0]))[:3,:,:] for i in img_list]
         else:
