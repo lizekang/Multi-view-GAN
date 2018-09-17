@@ -42,7 +42,7 @@ parser.add_argument('--decay_epoch', type=int, default=100, help='epoch from whi
 parser.add_argument('--n_cpu', type=int, default=8, help='number of cpu threads to use during batch generation')
 parser.add_argument('--img_height', type=int, default=512, help='size of image height')
 parser.add_argument('--img_width', type=int, default=512, help='size of image width')
-parser.add_argument('--channels', type=int, default=15, help='number of image channels')
+parser.add_argument('--channels', type=int, default=9, help='number of image channels')
 parser.add_argument('--c_dims', type=int, default=15, help='number of views')
 parser.add_argument('--sample_interval', type=int, default=100,
                     help='interval between sampling of images from generators')
