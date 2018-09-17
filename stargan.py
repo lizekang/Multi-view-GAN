@@ -134,28 +134,23 @@ def sample_images(steps_done):
     val_imgs1 = Variable(img1.type(Tensor))
     val_imgs2 = Variable(img2.type(Tensor))
     val_imgs3 = Variable(img3.type(Tensor))
-    val_imgs4 = Variable(img4.type(Tensor))
-    val_imgs5 = Variable(img5.type(Tensor))
     val_real_images = Variable(real_image.type(Tensor))
     val_labels = Variable(label.type(Tensor))
     img_samples = None
     for i in range(10):
-        img1, img2, img3, img4, img5, real_image, label = val_imgs1[i], val_imgs2[i], val_imgs3[i], val_imgs4[i], \
-                                                          val_imgs5[i], val_real_images[i], val_labels[i]
+        img1, img2, img3, real_image, label = val_imgs1[i], val_imgs2[i], val_imgs3[i], val_real_images[i], val_labels[i]
         # Repeat for number of label changes
         imgs1 = img1.repeat(8, 1, 1, 1)
         imgs2 = img2.repeat(8, 1, 1, 1)
         imgs3 = img3.repeat(8, 1, 1, 1)
-        imgs4 = img4.repeat(8, 1, 1, 1)
-        imgs5 = img5.repeat(8, 1, 1, 1)
         # Make changes to labels
-        labels = Variable(Tensor(np.random.randint(0, 1, (8, c_dim))))
+        labels = Variable(Tensor(np.random.randint(0, 2, (8, c_dim))))
         # Generate translations
 
-        gen_imgs = generator(imgs1, imgs2, imgs3, imgs4, imgs5, labels)
+        gen_imgs = generator(imgs1, imgs2, imgs3, labels)
         # Concatenate images by width
         gen_imgs = torch.cat([x for x in gen_imgs.data], -1)
-        img_sample = torch.cat([img1.data, img2.data, img3.data, img4.data, img5.data, gen_imgs], -1)
+        img_sample = torch.cat([img1.data, img2.data, img3.data, gen_imgs], -1)
         # Add as row to generated samples
         img_samples = img_sample if img_samples is None else torch.cat((img_samples, img_sample), -2)
 
@@ -217,19 +212,19 @@ for i, (img1, img2, img3, real_image, label) in enumerate(dataloader):
 
         # Translate and reconstruct image
         gen_imgs = generator(imgs1, imgs2, imgs3, sampled_c)
-        # recov_imgs = generator(gen_imgs, labels)
+        recov_imgs = generator(imgs1, imgs2, gen_imgs, labels)
         # Discriminator evaluates translated image
-        # fake_validity, pred_cls = discriminator(gen_imgs)
-        fake_validity, _ = discriminator(gen_imgs)
+        fake_validity, pred_cls = discriminator(gen_imgs)
+        # fake_validity, _ = discriminator(gen_imgs)
         # Adversarial loss
         loss_G_adv = -torch.mean(fake_validity)
         # Classification loss
-        # loss_G_cls = criterion_cls(pred_cls, sampled_c)
+        loss_G_cls = criterion_cls(pred_cls, sampled_c)
         # Reconstruction loss
-        # loss_G_rec = criterion_cycle(recov_imgs, real_images)
+        loss_G_rec = criterion_cycle(recov_imgs, real_images)
         # Total loss
-        # loss_G = loss_G_adv + lambda_cls * loss_G_cls + lambda_rec * loss_G_rec
-        loss_G = loss_G_adv
+        loss_G = loss_G_adv + lambda_cls * loss_G_cls + lambda_rec * loss_G_rec
+        # loss_G = loss_G_adv
 
         loss_G.backward()
         optimizer_G.step()
