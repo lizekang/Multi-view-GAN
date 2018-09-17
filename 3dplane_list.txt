@@ -109,7 +109,6 @@
 3dplane/96_6.jpg 96 6
 3dplane/13_6.jpg 13 6
 3dplane/203_6.jpg 203 6
-3dplane/339_1.jpg 339 1
 3dplane/249_10.jpg 249 10
 3dplane/168_7.jpg 168 7
 3dplane/172_1.jpg 172 1
@@ -1785,7 +1784,6 @@
 3dplane/46_1.jpg 46 1
 3dplane/126_0.jpg 126 0
 3dplane/261_7.jpg 261 7
-3dplane/339_0.jpg 339 0
 3dplane/33_2.jpg 33 2
 3dplane/213_13.jpg 213 13
 3dplane/65_4.jpg 65 4
