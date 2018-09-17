@@ -41,8 +41,8 @@ parser.add_argument('--b1', type=float, default=0.5, help='adam: decay of first 
 parser.add_argument('--b2', type=float, default=0.999, help='adam: decay of first order momentum of gradient')
 parser.add_argument('--decay_epoch', type=int, default=100, help='epoch from which to start lr decay')
 parser.add_argument('--n_cpu', type=int, default=8, help='number of cpu threads to use during batch generation')
-parser.add_argument('--img_height', type=int, default=512, help='size of image height')
-parser.add_argument('--img_width', type=int, default=512, help='size of image width')
+parser.add_argument('--img_height', type=int, default=128, help='size of image height')
+parser.add_argument('--img_width', type=int, default=128, help='size of image width')
 parser.add_argument('--channels', type=int, default=9, help='number of image channels')
 parser.add_argument('--c_dims', type=int, default=15, help='number of views')
 parser.add_argument('--sample_interval', type=int, default=100,
@@ -131,7 +131,7 @@ def compute_gradient_penalty(D, real_samples, fake_samples):
 
 def sample_images(steps_done):
     """Saves a generated sample of domain translations"""
-    img1, img2, img3, img4, img5, real_image, label = next(iter(val_dataloader))
+    img1, img2, img3, real_image, label = next(iter(val_dataloader))
     val_imgs1 = Variable(img1.type(Tensor))
     val_imgs2 = Variable(img2.type(Tensor))
     val_imgs3 = Variable(img3.type(Tensor))
