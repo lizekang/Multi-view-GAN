@@ -17,7 +17,7 @@ class MultiViewDataset(torch.utils.data.Dataset):  # 继承的torch.utils.data.D
         self.img_real_image = {}
         for line in f:
             words = line.split(' ')
-            if int(words[1]) not in self.img_input_dict.keys():
+            if int(words[1]) not in self.img_input_dict.keys() or int(words[1]) not in self.img_real_image.keys():
                 if int(words[2]) == 3 or int(words[2]) == 6 or int(words[2]) == 11:
                     self.img_input_dict[int(words[1])] = [(words[0], int(words[-1]))]
                 else:
