@@ -24,16 +24,17 @@ import torch
 
 from tensorboardX import SummaryWriter
 
-os.makedirs('images', exist_ok=True)
-os.makedirs('saved_models', exist_ok=True)
-os.makedirs('summary', exist_ok=True)
+if not os.path.exists("images"):
+    os.makedirs('images')
+    os.makedirs('saved_models')
+    os.makedirs('summary')
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--train_step', type=int, default=100000, help='epoch to start training from')
 parser.add_argument('--test_step', type=int, default=10, help='epoch to start training from')
 parser.add_argument('--n_train_step', type=int, default=200, help='number of epochs of training')
-parser.add_argument('--data_path', type=str, default="list.txt", help='number of epochs of training')
-parser.add_argument('--batch_size', type=int, default=16, help='size of the batches')
+parser.add_argument('--data_path', type=str, default="3dplane_list.txt", help='number of epochs of training')
+parser.add_argument('--batch_size', type=int, default=32, help='size of the batches')
 parser.add_argument('--retrain', type=bool, default=False, help='if retrain')
 parser.add_argument('--lr', type=float, default=0.0002, help='adam: learning rate')
 parser.add_argument('--b1', type=float, default=0.5, help='adam: decay of first order momentum of gradient')
@@ -42,8 +43,8 @@ parser.add_argument('--decay_epoch', type=int, default=100, help='epoch from whi
 parser.add_argument('--n_cpu', type=int, default=8, help='number of cpu threads to use during batch generation')
 parser.add_argument('--img_height', type=int, default=128, help='size of image height')
 parser.add_argument('--img_width', type=int, default=128, help='size of image width')
-parser.add_argument('--channels', type=int, default=15, help='number of image channels')
-parser.add_argument('--c_dims', type=int, default=10, help='number of views')
+parser.add_argument('--channels', type=int, default=9, help='number of image channels')
+parser.add_argument('--c_dims', type=int, default=15, help='number of views')
 parser.add_argument('--sample_interval', type=int, default=100,
                     help='interval between sampling of images from generators')
 parser.add_argument('--checkpoint_interval', type=int, default=100, help='interval between model checkpoints')
@@ -64,8 +65,9 @@ criterion_cycle = torch.nn.L1Loss()
 
 
 def criterion_cls(logit, target):
-    return F.binary_cross_entropy_with_logits(logit, target, size_average=False) / logit.size(0)
-
+    # return F.binary_cross_entropy_with_logits(logit, target, size_average=False) / logit.size(0)
+    target = torch.max(target, dim=1)[1]
+    return F.cross_entropy(logit, target, size_average=False)
 
 # Loss weights
 lambda_cls = 1
@@ -116,7 +118,6 @@ def compute_gradient_penalty(D, real_samples, fake_samples):
     # Random weight term for interpolation between real and fake samples
     alpha = Tensor(np.random.random((real_samples.size(0), 1, 1, 1)))
     # Get random interpolation between real and fake samples
-    print(alpha.size(), real_samples.size(), fake_samples.size())
     interpolates = (alpha * real_samples + ((1 - alpha) * fake_samples)).requires_grad_(True)
     d_interpolates, _ = D(interpolates)
     fake = Variable(Tensor(np.ones(d_interpolates.shape)), requires_grad=False)
@@ -131,32 +132,27 @@ def compute_gradient_penalty(D, real_samples, fake_samples):
 
 def sample_images(steps_done):
     """Saves a generated sample of domain translations"""
-    img1, img2, img3, img4, img5, real_image, label = next(iter(val_dataloader))
+    img1, img2, img3, real_image, label = next(iter(val_dataloader))
     val_imgs1 = Variable(img1.type(Tensor))
     val_imgs2 = Variable(img2.type(Tensor))
     val_imgs3 = Variable(img3.type(Tensor))
-    val_imgs4 = Variable(img4.type(Tensor))
-    val_imgs5 = Variable(img5.type(Tensor))
     val_real_images = Variable(real_image.type(Tensor))
     val_labels = Variable(label.type(Tensor))
     img_samples = None
     for i in range(10):
-        img1, img2, img3, img4, img5, real_image, label = val_imgs1[i], val_imgs2[i], val_imgs3[i], val_imgs4[i], \
-                                                          val_imgs5[i], val_real_images[i], val_labels[i]
+        img1, img2, img3, real_image, label = val_imgs1[i], val_imgs2[i], val_imgs3[i], val_real_images[i], val_labels[i]
         # Repeat for number of label changes
         imgs1 = img1.repeat(8, 1, 1, 1)
         imgs2 = img2.repeat(8, 1, 1, 1)
         imgs3 = img3.repeat(8, 1, 1, 1)
-        imgs4 = img4.repeat(8, 1, 1, 1)
-        imgs5 = img5.repeat(8, 1, 1, 1)
         # Make changes to labels
-        labels = Variable(Tensor(np.random.normal(0, 1, (8, c_dim))))
+        labels = Variable(Tensor(np.eye(c_dim)[np.random.randint(0, 2, (8))]))
         # Generate translations
 
-        gen_imgs = generator(imgs1, imgs2, imgs3, imgs4, imgs5, labels)
+        gen_imgs = generator(imgs1, imgs2, imgs3, labels)
         # Concatenate images by width
         gen_imgs = torch.cat([x for x in gen_imgs.data], -1)
-        img_sample = torch.cat([img1.data, img2.data, img3.data, img4.data, img5.data, gen_imgs], -1)
+        img_sample = torch.cat([img1.data, img2.data, img3.data, gen_imgs], -1)
         # Add as row to generated samples
         img_samples = img_sample if img_samples is None else torch.cat((img_samples, img_sample), -2)
 
@@ -169,22 +165,20 @@ def sample_images(steps_done):
 
 saved_samples = []
 start_time = time.time()
-for i, (img1, img2, img3, img4, img5, real_image, label) in enumerate(dataloader):
+for i, (img1, img2, img3, real_image, label) in enumerate(dataloader):
 
     # Model inputs
     imgs1 = Variable(img1.type(Tensor))
     imgs2 = Variable(img2.type(Tensor))
     imgs3 = Variable(img3.type(Tensor))
-    imgs4 = Variable(img4.type(Tensor))
-    imgs5 = Variable(img5.type(Tensor))
     real_images = Variable(real_image.type(Tensor))
     labels = Variable(label.type(Tensor))
 
     # Sample labels as generator inputs
-    # sampled_c = Variable(Tensor(np.random.randint(0, 2, (real_images.size(0), c_dim))))
-    sampled_c = Variable(Tensor(np.random.normal(0, 1, (real_images.size(0), c_dim))))
+    sampled_c = Variable(Tensor(np.eye(c_dim)[np.random.randint(0, 15, (real_images.size(0)))]))
+    # sampled_c = Variable(Tensor(np.random.normal(0, 1, (real_images.size(0), c_dim))))
     # Generate fake batch of images
-    fake_imgs = generator(imgs1, imgs2, imgs3, imgs4, imgs5, sampled_c)
+    fake_imgs = generator(imgs1, imgs2, imgs3, sampled_c)
 
     # ---------------------
     #  Train Discriminator
@@ -193,8 +187,8 @@ for i, (img1, img2, img3, img4, img5, real_image, label) in enumerate(dataloader
     optimizer_D.zero_grad()
 
     # Real images
-    # real_validity, pred_cls = discriminator(real_images)
-    real_validity, _ = discriminator(real_images)
+    real_validity, pred_cls = discriminator(real_images)
+    # real_validity, _ = discriminator(real_images)
     # Fake images
     fake_validity, _ = discriminator(fake_imgs.detach())
     # Gradient penalty
@@ -202,10 +196,10 @@ for i, (img1, img2, img3, img4, img5, real_image, label) in enumerate(dataloader
     # Adversarial loss
     loss_D_adv = - torch.mean(real_validity) + torch.mean(fake_validity) + lambda_gp * gradient_penalty
     # Classification loss
-    # loss_D_cls = criterion_cls(pred_cls, labels)
+    loss_D_cls = criterion_cls(pred_cls, labels)
     # Total loss
-    # loss_D = loss_D_adv + lambda_cls * loss_D_cls
-    loss_D = loss_D_adv
+    loss_D = loss_D_adv + lambda_cls * loss_D_cls
+    # loss_D = loss_D_adv
     loss_D.backward()
     optimizer_D.step()
 
@@ -219,20 +213,20 @@ for i, (img1, img2, img3, img4, img5, real_image, label) in enumerate(dataloader
         # -----------------
 
         # Translate and reconstruct image
-        gen_imgs = generator(imgs1, imgs2, imgs3, imgs4, imgs5, sampled_c)
-        # recov_imgs = generator(gen_imgs, labels)
+        gen_imgs = generator(imgs1, imgs2, imgs3, sampled_c)
+        recov_imgs = generator(imgs1, imgs2, gen_imgs, labels)
         # Discriminator evaluates translated image
-        # fake_validity, pred_cls = discriminator(gen_imgs)
-        fake_validity, _ = discriminator(gen_imgs)
+        fake_validity, pred_cls = discriminator(gen_imgs)
+        # fake_validity, _ = discriminator(gen_imgs)
         # Adversarial loss
         loss_G_adv = -torch.mean(fake_validity)
         # Classification loss
-        # loss_G_cls = criterion_cls(pred_cls, sampled_c)
+        loss_G_cls = criterion_cls(pred_cls, sampled_c)
         # Reconstruction loss
-        # loss_G_rec = criterion_cycle(recov_imgs, real_images)
+        loss_G_rec = criterion_cycle(recov_imgs, real_images)
         # Total loss
-        # loss_G = loss_G_adv + lambda_cls * loss_G_cls + lambda_rec * loss_G_rec
-        loss_G = loss_G_adv
+        loss_G = loss_G_adv + lambda_cls * loss_G_cls + lambda_rec * loss_G_rec
+        # loss_G = loss_G_adv
 
         loss_G.backward()
         optimizer_G.step()

@@ -30,7 +30,7 @@ class ResidualBlock(nn.Module):
 
 
 class GeneratorResNet(nn.Module):
-    def __init__(self, img_shape=(15, 128, 128), res_blocks=9, c_dim=10):
+    def __init__(self, img_shape=(9, 128, 128), res_blocks=9, c_dim=10):
         super(GeneratorResNet, self).__init__()
         channels, img_size, _ = img_shape
 
@@ -65,10 +65,10 @@ class GeneratorResNet(nn.Module):
         self.downmodel = nn.Sequential(*model1)
         self.upmodel = nn.Sequential(*model2)
 
-    def forward(self, img1, img2, img3, img4, img5, c):
+    def forward(self, img1, img2, img3, c):
         c = c.view(c.size(0), c.size(1), 1, 1)
         c = c.repeat(1, 1, img1.size(2), img1.size(3))
-        x = torch.cat([img1, img2, img3, img4, img5, c], 1)
+        x = torch.cat([img1, img2, img3, c], 1)
         x = self.downmodel(x)
         return self.upmodel(x)
 
