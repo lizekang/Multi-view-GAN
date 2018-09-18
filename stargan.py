@@ -34,15 +34,15 @@ parser.add_argument('--train_step', type=int, default=100000, help='epoch to sta
 parser.add_argument('--test_step', type=int, default=10, help='epoch to start training from')
 parser.add_argument('--n_train_step', type=int, default=200, help='number of epochs of training')
 parser.add_argument('--data_path', type=str, default="3dplane_list.txt", help='number of epochs of training')
-parser.add_argument('--batch_size', type=int, default=2, help='size of the batches')
+parser.add_argument('--batch_size', type=int, default=32, help='size of the batches')
 parser.add_argument('--retrain', type=bool, default=False, help='if retrain')
 parser.add_argument('--lr', type=float, default=0.0002, help='adam: learning rate')
 parser.add_argument('--b1', type=float, default=0.5, help='adam: decay of first order momentum of gradient')
 parser.add_argument('--b2', type=float, default=0.999, help='adam: decay of first order momentum of gradient')
 parser.add_argument('--decay_epoch', type=int, default=100, help='epoch from which to start lr decay')
 parser.add_argument('--n_cpu', type=int, default=8, help='number of cpu threads to use during batch generation')
-parser.add_argument('--img_height', type=int, default=512, help='size of image height')
-parser.add_argument('--img_width', type=int, default=512, help='size of image width')
+parser.add_argument('--img_height', type=int, default=128, help='size of image height')
+parser.add_argument('--img_width', type=int, default=128, help='size of image width')
 parser.add_argument('--channels', type=int, default=9, help='number of image channels')
 parser.add_argument('--c_dims', type=int, default=15, help='number of views')
 parser.add_argument('--sample_interval', type=int, default=100,
@@ -146,7 +146,7 @@ def sample_images(steps_done):
         imgs2 = img2.repeat(8, 1, 1, 1)
         imgs3 = img3.repeat(8, 1, 1, 1)
         # Make changes to labels
-        labels = Variable(Tensor(np.random.randint(0, 2, (8, c_dim))))
+        labels = Variable(Tensor(np.eye(c_dim)[np.random.randint(0, 2, (8))]))
         # Generate translations
 
         gen_imgs = generator(imgs1, imgs2, imgs3, labels)
@@ -175,7 +175,7 @@ for i, (img1, img2, img3, real_image, label) in enumerate(dataloader):
     labels = Variable(label.type(Tensor))
 
     # Sample labels as generator inputs
-    sampled_c = Variable(Tensor(np.random.randint(0, 2, (real_images.size(0), c_dim))))
+    sampled_c = Variable(Tensor(np.eye(c_dim)[np.random.randint(0, 15, (real_images.size(0)))]))
     # sampled_c = Variable(Tensor(np.random.normal(0, 1, (real_images.size(0), c_dim))))
     # Generate fake batch of images
     fake_imgs = generator(imgs1, imgs2, imgs3, sampled_c)

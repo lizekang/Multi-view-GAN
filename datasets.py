@@ -22,11 +22,10 @@ class MultiViewDataset(torch.utils.data.Dataset):  # 继承的torch.utils.data.D
                     self.img_input_dict[int(words[1])] = [(words[0], int(words[-1]))]
                 else:
                     self.img_input_dict[int(words[1])].append((words[0], int(words[-1])))
+            if int(words[1]) not in self.img_real_image.keys():
+                self.img_real_image[int(words[1])] = [(words[0], int(words[-1]))]
             else:
-                if int(words[1]) not in self.img_real_image.keys():
-                    self.img_real_image[int(words[1])] = [(words[0], int(words[-1]))]
-                else:
-                    self.img_real_image[int(words[1])].append((words[0], int(words[-1])))
+                self.img_real_image[int(words[1])].append((words[0], int(words[-1])))
 
         self.batch_size = batch_size
         self.train_step = train_step
