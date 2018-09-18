@@ -65,8 +65,9 @@ criterion_cycle = torch.nn.L1Loss()
 
 
 def criterion_cls(logit, target):
-    return F.binary_cross_entropy_with_logits(logit, target, size_average=False) / logit.size(0)
-
+    # return F.binary_cross_entropy_with_logits(logit, target, size_average=False) / logit.size(0)
+    target = torch.max(target, dim=1)[1]
+    return F.cross_entropy(logit, target, size_average=False)
 
 # Loss weights
 lambda_cls = 1
