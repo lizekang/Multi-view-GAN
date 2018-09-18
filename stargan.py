@@ -199,6 +199,7 @@ for i, (img1, img2, img3, real_image, label) in enumerate(dataloader):
     loss_D_cls = criterion_cls(pred_cls, labels)
     # Total loss
     loss_D = loss_D_adv + lambda_cls * loss_D_cls
+    writer.add_scalar("Discriminator/Train/loss", loss_D, i)
     # loss_D = loss_D_adv
     loss_D.backward()
     optimizer_D.step()
@@ -227,6 +228,7 @@ for i, (img1, img2, img3, real_image, label) in enumerate(dataloader):
         # Total loss
         loss_G = loss_G_adv + lambda_cls * loss_G_cls + lambda_rec * loss_G_rec
         # loss_G = loss_G_adv
+        writer.add_scalar("Generator/Train/loss", loss_G, i)
 
         loss_G.backward()
         optimizer_G.step()
