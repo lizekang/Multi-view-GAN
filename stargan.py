@@ -146,7 +146,7 @@ def sample_images(steps_done):
         imgs2 = img2.repeat(8, 1, 1, 1)
         imgs3 = img3.repeat(8, 1, 1, 1)
         # Make changes to labels
-        labels = Variable(Tensor(np.eye(c_dim)[np.random.randint(0, 2, (8))]))
+        labels = Variable(Tensor(np.eye(c_dim)[np.random.randint(0, c_dim, (8))]))
         # Generate translations
 
         gen_imgs = generator(imgs1, imgs2, imgs3, labels)
@@ -175,7 +175,7 @@ for i, (img1, img2, img3, real_image, label) in enumerate(dataloader):
     labels = Variable(label.type(Tensor))
 
     # Sample labels as generator inputs
-    sampled_c = Variable(Tensor(np.eye(c_dim)[np.random.randint(0, 15, (real_images.size(0)))]))
+    sampled_c = Variable(Tensor(np.eye(c_dim)[np.random.randint(0, c_dim, (real_images.size(0)))]))
     # sampled_c = Variable(Tensor(np.random.normal(0, 1, (real_images.size(0), c_dim))))
     # Generate fake batch of images
     fake_imgs = generator(imgs1, imgs2, imgs3, sampled_c)
