@@ -34,7 +34,7 @@ parser.add_argument('--train_step', type=int, default=100000, help='epoch to sta
 parser.add_argument('--test_step', type=int, default=10, help='epoch to start training from')
 parser.add_argument('--n_train_step', type=int, default=200, help='number of epochs of training')
 parser.add_argument('--data_path', type=str, default="3dletter_list.txt", help='number of epochs of training')
-parser.add_argument('--batch_size', type=int, default=16, help='size of the batches')
+parser.add_argument('--batch_size', type=int, default=64, help='size of the batches')
 parser.add_argument('--retrain', type=bool, default=False, help='if retrain')
 parser.add_argument('--lr', type=float, default=0.0002, help='adam: learning rate')
 parser.add_argument('--b1', type=float, default=0.5, help='adam: decay of first order momentum of gradient')
@@ -132,27 +132,23 @@ def compute_gradient_penalty(D, real_samples, fake_samples):
 
 def sample_images(steps_done):
     """Saves a generated sample of domain translations"""
-    img1, img2, img3, real_image, label = next(iter(val_dataloader))
+    img1, real_image, label = next(iter(val_dataloader))
     val_imgs1 = Variable(img1.type(Tensor))
-    val_imgs2 = Variable(img2.type(Tensor))
-    val_imgs3 = Variable(img3.type(Tensor))
     val_real_images = Variable(real_image.type(Tensor))
     val_labels = Variable(label.type(Tensor))
     img_samples = None
     for i in range(10):
-        img1, img2, img3, real_image, label = val_imgs1[i], val_imgs2[i], val_imgs3[i], val_real_images[i], val_labels[i]
+        img1, real_image, label = val_imgs1[i], val_real_images[i], val_labels[i]
         # Repeat for number of label changes
         imgs1 = img1.repeat(8, 1, 1, 1)
-        imgs2 = img2.repeat(8, 1, 1, 1)
-        imgs3 = img3.repeat(8, 1, 1, 1)
         # Make changes to labels
         labels = Variable(Tensor(np.eye(c_dim)[np.random.randint(0, c_dim, (8))]))
         # Generate translations
 
-        gen_imgs = generator(imgs1, imgs2, imgs3, labels)
+        gen_imgs = generator(imgs1, labels)
         # Concatenate images by width
         gen_imgs = torch.cat([x for x in gen_imgs.data], -1)
-        img_sample = torch.cat([img1.data, img2.data, img3.data, gen_imgs], -1)
+        img_sample = torch.cat([img1.data, real_image.data, gen_imgs], -1)
         # Add as row to generated samples
         img_samples = img_sample if img_samples is None else torch.cat((img_samples, img_sample), -2)
 
@@ -165,12 +161,10 @@ def sample_images(steps_done):
 
 saved_samples = []
 start_time = time.time()
-for i, (img1, img2, img3, real_image, label) in enumerate(dataloader):
+for i, (img1, real_image, label) in enumerate(dataloader):
 
     # Model inputs
     imgs1 = Variable(img1.type(Tensor))
-    imgs2 = Variable(img2.type(Tensor))
-    imgs3 = Variable(img3.type(Tensor))
     real_images = Variable(real_image.type(Tensor))
     labels = Variable(label.type(Tensor))
 
@@ -178,7 +172,7 @@ for i, (img1, img2, img3, real_image, label) in enumerate(dataloader):
     sampled_c = Variable(Tensor(np.eye(c_dim)[np.random.randint(0, c_dim, (real_images.size(0)))]))
     # sampled_c = Variable(Tensor(np.random.normal(0, 1, (real_images.size(0), c_dim))))
     # Generate fake batch of images
-    fake_imgs = generator(imgs1, imgs2, imgs3, sampled_c)
+    fake_imgs = generator(imgs1, sampled_c)
 
     # ---------------------
     #  Train Discriminator
@@ -217,8 +211,8 @@ for i, (img1, img2, img3, real_image, label) in enumerate(dataloader):
         # -----------------
 
         # Translate and reconstruct image
-        gen_imgs = generator(imgs1, imgs2, imgs3, sampled_c)
-        recov_imgs = generator(imgs1, imgs2, gen_imgs, labels)
+        gen_imgs = generator(imgs1, sampled_c)
+        recov_imgs = generator(gen_imgs, labels)
         # Discriminator evaluates translated image
         fake_validity, pred_cls = discriminator(gen_imgs)
         # fake_validity, _ = discriminator(gen_imgs)

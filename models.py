@@ -35,7 +35,7 @@ class GeneratorResNet(nn.Module):
         channels, img_size, _ = img_shape
 
         # Initial convolution block
-        model1 = [nn.Conv2d(channels, 64, 7, stride=1, padding=3, bias=False),
+        model1 = [nn.Conv2d(channels+c_dim, 64, 7, stride=1, padding=3, bias=False),
                  nn.InstanceNorm2d(64, affine=True, track_running_stats=True),
                  nn.ReLU(inplace=True)]
 
@@ -52,7 +52,6 @@ class GeneratorResNet(nn.Module):
             model1 += [ResidualBlock(curr_dim)]
 
         # Upsampling
-        curr_dim = curr_dim * 3 + c_dim
         model2 = []
         for _ in range(2):
             model2 += [nn.ConvTranspose2d(curr_dim, curr_dim // 2, 4, stride=2, padding=1, bias=False),
@@ -66,13 +65,17 @@ class GeneratorResNet(nn.Module):
         self.downmodel = nn.Sequential(*model1)
         self.upmodel = nn.Sequential(*model2)
 
-    def forward(self, img1, img2, img3, c):
-        x1 = self.downmodel(img1)
-        x2 = self.downmodel(img2)
-        x3 = self.downmodel(img3)
+    def forward(self, img1, c):
         c = c.view(c.size(0), c.size(1), 1, 1)
-        c = c.repeat(1, 1, x1.size(2), x1.size(3))
-        x = torch.cat([x1, x2, x3, c], dim=1)
+        c = c.repeat(1, 1, img1.size(2), img1.size(3))
+        x = torch.cat((img1, c), dim=1)
+        x = self.downmodel(x)
+        # x1 = self.downmodel(img1)
+        # x2 = self.downmodel(img2)
+        # x3 = self.downmodel(img3)
+        # c = c.view(c.size(0), c.size(1), 1, 1)
+        # c = c.repeat(1, 1, x1.size(2), x1.size(3))
+        # x = torch.cat([x1, x2, x3, c], dim=1)
         return self.upmodel(x)
 
 
