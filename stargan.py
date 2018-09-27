@@ -16,7 +16,7 @@ from torch.autograd import Variable
 import torch.autograd as autograd
 
 from models import *
-from datasets import *
+from datasetss import *
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -34,23 +34,23 @@ parser.add_argument('--train_step', type=int, default=100000, help='epoch to sta
 parser.add_argument('--test_step', type=int, default=10, help='epoch to start training from')
 parser.add_argument('--n_train_step', type=int, default=200, help='number of epochs of training')
 parser.add_argument('--data_path', type=str, default="3dletter_list.txt", help='number of epochs of training')
-parser.add_argument('--batch_size', type=int, default=32, help='size of the batches')
+parser.add_argument('--batch_size', type=int, default=8, help='size of the batches')
 parser.add_argument('--retrain', type=bool, default=False, help='if retrain')
 parser.add_argument('--lr', type=float, default=0.0002, help='adam: learning rate')
 parser.add_argument('--b1', type=float, default=0.5, help='adam: decay of first order momentum of gradient')
 parser.add_argument('--b2', type=float, default=0.999, help='adam: decay of first order momentum of gradient')
 parser.add_argument('--decay_epoch', type=int, default=100, help='epoch from which to start lr decay')
 parser.add_argument('--n_cpu', type=int, default=8, help='number of cpu threads to use during batch generation')
-parser.add_argument('--img_height', type=int, default=128, help='size of image height')
-parser.add_argument('--img_width', type=int, default=128, help='size of image width')
-parser.add_argument('--channels', type=int, default=9, help='number of image channels')
-parser.add_argument('--c_dims', type=int, default=15, help='number of views')
+parser.add_argument('--img_height', type=int, default=32, help='size of image height')
+parser.add_argument('--img_width', type=int, default=32, help='size of image width')
+parser.add_argument('--channels', type=int, default=27, help='number of image channels')
+parser.add_argument('--c_dims', type=int, default=9, help='number of views')
 parser.add_argument('--sample_interval', type=int, default=100,
                     help='interval between sampling of images from generators')
 parser.add_argument('--checkpoint_interval', type=int, default=100, help='interval between model checkpoints')
 parser.add_argument('--summary_path', type=str, default='./summary', help='path for summary')
 parser.add_argument('--residual_blocks', type=int, default=6, help='number of residual blocks in generator')
-parser.add_argument('--n_critic', type=int, default=5, help='number of training iterations for WGAN discriminator')
+parser.add_argument('--n_critic', type=int, default=2, help='number of training iterations for WGAN discriminator')
 opt = parser.parse_args()
 print(opt)
 
@@ -64,10 +64,12 @@ cuda = True if torch.cuda.is_available() else False
 criterion_cycle = torch.nn.L1Loss()
 
 
-def criterion_cls(logit, target):
+def criterion_reg(logit, target):
     # return F.binary_cross_entropy_with_logits(logit, target, size_average=False) / logit.size(0)
-    target = torch.max(target, dim=1)[1]
-    return F.cross_entropy(logit, target, size_average=False)
+    # target = torch.max(target, dim=1)[1]
+    # return F.cross_entropy(logit, target, size_average=False)
+    return F.mse_loss(logit, target, size_average=False)
+
 
 # Loss weights
 lambda_cls = 1
@@ -97,14 +99,14 @@ optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=opt.lr, betas=(opt
 # Configure dataloaders
 train_transforms = [transforms.Resize((opt.img_height, opt.img_width), Image.BICUBIC),
                     transforms.ToTensor(),
-                    transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5)) ]
+                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
 
 dataloader = DataLoader(MultiViewDataset(opt.data_path, batch_size=opt.batch_size, train_step=opt.train_step, transform=train_transforms),
                         batch_size=opt.batch_size, shuffle=True, num_workers=opt.n_cpu)
 
 val_transforms = [  transforms.Resize((opt.img_height, opt.img_width), Image.BICUBIC),
                     transforms.ToTensor(),
-                    transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5)) ]
+                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
 
 val_dataloader = DataLoader(MultiViewDataset(opt.data_path, batch_size=10, train_step=opt.test_step, transform=val_transforms),
                             batch_size=10, shuffle=True, num_workers=1)
@@ -130,29 +132,57 @@ def compute_gradient_penalty(D, real_samples, fake_samples):
     return gradient_penalty
 
 
+def noise(batch_size):
+    beta = np.random.randint(-90, 90, batch_size) / 180.0
+    beta = beta.reshape((batch_size, 1))
+    alpha = (np.random.randint(-180, 180, batch_size)) / 360.0
+    alpha = alpha.reshape((batch_size, 1))
+    noise_vec = np.hstack((alpha, beta))
+    return cos_(noise_vec)
+
+
+def cos_(labels):
+    imgs_vec = [[-0.5, -0.2777], [-0.5, 0.0], [-0.5, 0.2777],
+                [-0.1666, -0.2777], [-0.1666, 0.0], [-0.1666, 0.2777],
+                [0.1666, -0.2777], [0.1666, 0.0], [0.1666, 0.2777]]
+    imgs_vec = np.array(imgs_vec)
+
+    def cos_sim(vector_a, vector_b):
+        """
+        计算两个向量之间的余弦相似度
+        :param vector_a: 向量 a
+        :param vector_b: 向量 b
+        :return: sim
+        """
+        vector_a = np.mat(vector_a)
+        vector_b = np.mat(vector_b)
+        num = vector_a * vector_b.T
+        denom = np.linalg.norm(vector_a) * np.linalg.norm(vector_b)
+        cos = num / denom
+        sim = 0.5 + 0.5 * cos
+        return sim
+    return cos_sim(labels, imgs_vec)
+
+
 def sample_images(steps_done):
     """Saves a generated sample of domain translations"""
-    img1, img2, img3, real_image, label = next(iter(val_dataloader))
-    val_imgs1 = Variable(img1.type(Tensor))
-    val_imgs2 = Variable(img2.type(Tensor))
-    val_imgs3 = Variable(img3.type(Tensor))
+    img, real_image, label = next(iter(val_dataloader))
+    val_imgs = Variable(img.type(Tensor))
     val_real_images = Variable(real_image.type(Tensor))
     val_labels = Variable(label.type(Tensor))
     img_samples = None
     for i in range(10):
-        img1, img2, img3, real_image, label = val_imgs1[i], val_imgs2[i], val_imgs3[i], val_real_images[i], val_labels[i]
+        imgs, real_image, label = val_imgs[i], val_real_images[i], val_labels[i]
         # Repeat for number of label changes
-        imgs1 = img1.repeat(8, 1, 1, 1)
-        imgs2 = img2.repeat(8, 1, 1, 1)
-        imgs3 = img3.repeat(8, 1, 1, 1)
+        imgs = imgs.repeat(8, 1, 1, 1)
         # Make changes to labels
-        labels = Variable(Tensor(np.eye(c_dim)[np.random.randint(0, c_dim, (8))]))
+        labels = Variable(Tensor(noise(8)))
         # Generate translations
 
-        gen_imgs = generator(imgs1, imgs2, imgs3, labels)
+        gen_imgs = generator(imgs, labels)
         # Concatenate images by width
         gen_imgs = torch.cat([x for x in gen_imgs.data], -1)
-        img_sample = torch.cat([img1.data, img2.data, img3.data, gen_imgs], -1)
+        img_sample = torch.cat([imgs.data, gen_imgs], -1)
         # Add as row to generated samples
         img_samples = img_sample if img_samples is None else torch.cat((img_samples, img_sample), -2)
 
@@ -165,20 +195,19 @@ def sample_images(steps_done):
 
 saved_samples = []
 start_time = time.time()
-for i, (img1, img2, img3, real_image, label) in enumerate(dataloader):
+for i, (img, real_image, label) in enumerate(dataloader):
 
     # Model inputs
-    imgs1 = Variable(img1.type(Tensor))
-    imgs2 = Variable(img2.type(Tensor))
-    imgs3 = Variable(img3.type(Tensor))
+    imgs = Variable(img.type(Tensor))
     real_images = Variable(real_image.type(Tensor))
-    labels = Variable(label.type(Tensor))
+    labels = cos_(label)
+    labels = Variable(labels.type(Tensor))
 
     # Sample labels as generator inputs
-    sampled_c = Variable(Tensor(np.eye(c_dim)[np.random.randint(0, c_dim, (real_images.size(0)))]))
+    sampled_c = Variable(Tensor(noise(real_images.size(0))))
     # sampled_c = Variable(Tensor(np.random.normal(0, 1, (real_images.size(0), c_dim))))
     # Generate fake batch of images
-    fake_imgs = generator(imgs1, imgs2, imgs3, sampled_c)
+    fake_imgs = generator(imgs, sampled_c)
 
     # ---------------------
     #  Train Discriminator
@@ -187,21 +216,21 @@ for i, (img1, img2, img3, real_image, label) in enumerate(dataloader):
     optimizer_D.zero_grad()
 
     # Real images
-    real_validity, pred_cls = discriminator(real_images)
+    real_validity, pred_vec = discriminator(imgs, real_images)
     # real_validity, _ = discriminator(real_images)
     # Fake images
-    fake_validity, _ = discriminator(fake_imgs.detach())
+    fake_validity, _ = discriminator(imgs, fake_imgs.detach())
     # Gradient penalty
     gradient_penalty = compute_gradient_penalty(discriminator, real_images.data, fake_imgs.data)
     # Adversarial loss
     loss_D_adv = - torch.mean(real_validity) + torch.mean(fake_validity) + lambda_gp * gradient_penalty
     # Classification loss
-    loss_D_cls = criterion_cls(pred_cls, labels)
+    loss_D_reg = criterion_reg(pred_vec, labels)
     # Total loss
-    loss_D = loss_D_adv + lambda_cls * loss_D_cls
+    loss_D = loss_D_adv + lambda_cls * loss_D_reg
     writer.add_scalar("Discriminator/Train/loss_D", loss_D, i)
     writer.add_scalar("Discriminator/Train/loss_D_adv", loss_D_adv, i)
-    writer.add_scalar("Discriminator/Train/loss_D_cls", loss_D_cls, i)
+    writer.add_scalar("Discriminator/Train/loss_D_cls", loss_D_reg, i)
 
     # loss_D = loss_D_adv
     loss_D.backward()
@@ -217,24 +246,21 @@ for i, (img1, img2, img3, real_image, label) in enumerate(dataloader):
         # -----------------
 
         # Translate and reconstruct image
-        gen_imgs = generator(imgs1, imgs2, imgs3, sampled_c)
-        recov_imgs = generator(imgs1, imgs2, gen_imgs, labels)
+        gen_imgs = generator(imgs, sampled_c)
         # Discriminator evaluates translated image
-        fake_validity, pred_cls = discriminator(gen_imgs)
+        fake_validity, pred_cls = discriminator(imgs, gen_imgs)
         # fake_validity, _ = discriminator(gen_imgs)
         # Adversarial loss
         loss_G_adv = -torch.mean(fake_validity)
         # Classification loss
-        loss_G_cls = criterion_cls(pred_cls, sampled_c)
+        loss_G_reg = criterion_reg(pred_cls, sampled_c)
         # Reconstruction loss
-        loss_G_rec = criterion_cycle(recov_imgs, real_images)
         # Total loss
-        loss_G = loss_G_adv + lambda_cls * loss_G_cls + lambda_rec * loss_G_rec
+        loss_G = loss_G_adv + lambda_cls * loss_G_reg
         # loss_G = loss_G_adv
         writer.add_scalar("Generator/Train/loss_G", loss_G, i)
         writer.add_scalar("Generator/Train/loss_G_adv", loss_G_adv, i)
-        writer.add_scalar("Generator/Train/loss_G_cls", loss_G_cls, i)
-        writer.add_scalar("Generator/Train/loss_G_rec", loss_G_rec, i)
+        writer.add_scalar("Generator/Train/loss_G_cls", loss_G_reg, i)
 
         loss_G.backward()
         optimizer_G.step()
