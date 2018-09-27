@@ -33,7 +33,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--train_step', type=int, default=100000, help='epoch to start training from')
 parser.add_argument('--test_step', type=int, default=10, help='epoch to start training from')
 parser.add_argument('--n_train_step', type=int, default=200, help='number of epochs of training')
-parser.add_argument('--data_path', type=str, default="3dletter_list.txt", help='number of epochs of training')
+parser.add_argument('--data_path', type=str, default="newlist.txt", help='number of epochs of training')
 parser.add_argument('--batch_size', type=int, default=8, help='size of the batches')
 parser.add_argument('--retrain', type=bool, default=False, help='if retrain')
 parser.add_argument('--lr', type=float, default=0.0002, help='adam: learning rate')
@@ -49,7 +49,7 @@ parser.add_argument('--sample_interval', type=int, default=100,
                     help='interval between sampling of images from generators')
 parser.add_argument('--checkpoint_interval', type=int, default=100, help='interval between model checkpoints')
 parser.add_argument('--summary_path', type=str, default='./summary', help='path for summary')
-parser.add_argument('--residual_blocks', type=int, default=6, help='number of residual blocks in generator')
+parser.add_argument('--residual_blocks', type=int, default=4, help='number of residual blocks in generator')
 parser.add_argument('--n_critic', type=int, default=2, help='number of training iterations for WGAN discriminator')
 opt = parser.parse_args()
 print(opt)
@@ -78,7 +78,7 @@ lambda_gp = 10
 
 # Initialize generator and discriminator
 generator = GeneratorResNet(img_shape=img_shape, res_blocks=opt.residual_blocks, c_dim=c_dim)
-discriminator = Discriminator(img_shape=(3, opt.img_height, opt.img_width), c_dim=c_dim)
+discriminator = Discriminator(img_shape=img_shape)
 
 if cuda:
     generator = generator.cuda()
@@ -148,19 +148,13 @@ def cos_(labels):
     imgs_vec = np.array(imgs_vec)
 
     def cos_sim(vector_a, vector_b):
-        """
-        计算两个向量之间的余弦相似度
-        :param vector_a: 向量 a
-        :param vector_b: 向量 b
-        :return: sim
-        """
         vector_a = np.mat(vector_a)
         vector_b = np.mat(vector_b)
         num = vector_a * vector_b.T
         denom = np.linalg.norm(vector_a) * np.linalg.norm(vector_b)
         cos = num / denom
         sim = 0.5 + 0.5 * cos
-        return sim
+        return np.asarray(sim)
     return cos_sim(labels, imgs_vec)
 
 
@@ -182,7 +176,7 @@ def sample_images(steps_done):
         gen_imgs = generator(imgs, labels)
         # Concatenate images by width
         gen_imgs = torch.cat([x for x in gen_imgs.data], -1)
-        img_sample = torch.cat([imgs.data, gen_imgs], -1)
+        img_sample = torch.cat([imgs.data[1, :3, :, :], gen_imgs], -1)
         # Add as row to generated samples
         img_samples = img_sample if img_samples is None else torch.cat((img_samples, img_sample), -2)
 
@@ -196,12 +190,11 @@ def sample_images(steps_done):
 saved_samples = []
 start_time = time.time()
 for i, (img, real_image, label) in enumerate(dataloader):
-
     # Model inputs
     imgs = Variable(img.type(Tensor))
     real_images = Variable(real_image.type(Tensor))
     labels = cos_(label)
-    labels = Variable(labels.type(Tensor))
+    labels = Variable(Tensor(labels))
 
     # Sample labels as generator inputs
     sampled_c = Variable(Tensor(noise(real_images.size(0))))
@@ -221,9 +214,10 @@ for i, (img, real_image, label) in enumerate(dataloader):
     # Fake images
     fake_validity, _ = discriminator(imgs, fake_imgs.detach())
     # Gradient penalty
-    gradient_penalty = compute_gradient_penalty(discriminator, real_images.data, fake_imgs.data)
+    #gradient_penalty = compute_gradient_penalty(discriminator, real_images.data, fake_imgs.data)
     # Adversarial loss
-    loss_D_adv = - torch.mean(real_validity) + torch.mean(fake_validity) + lambda_gp * gradient_penalty
+    #loss_D_adv = - torch.mean(real_validity) + torch.mean(fake_validity) + lambda_gp * gradient_penalty
+    loss_D_adv = - torch.mean(real_validity) + torch.mean(fake_validity)
     # Classification loss
     loss_D_reg = criterion_reg(pred_vec, labels)
     # Total loss

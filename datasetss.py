@@ -18,20 +18,18 @@ class MultiViewDataset(torch.utils.data.Dataset):  # 继承的torch.utils.data.D
         self.img_real_image = {}
         f = open(path, 'r')
         for line in f:
-            words = line.split(' ')
+            words = line[:-1].split(' ')
             if words[2] in hlist:
                 if words[3] in vlist:
                     if int(words[1]) not in self.img_input_dict.keys():
                         self.img_input_dict[int(words[1])] = [words[0]]
                     else:
                         self.img_input_dict[int(words[1])].append(words[0])
-            ######
 
             if int(words[1]) not in self.img_real_image.keys():
                 self.img_real_image[int(words[1])] = [(words[0], int(words[-2]), int(words[-1]))]
             else:
                 self.img_real_image[int(words[1])].append((words[0],int(words[-2]), int(words[-1])))
-
         self.batch_size = batch_size
         self.train_step = train_step
         self.transform = transforms.Compose(transform)
@@ -41,13 +39,9 @@ class MultiViewDataset(torch.utils.data.Dataset):  # 继承的torch.utils.data.D
         img_list = sorted(self.img_input_dict[class_index][:]) + [random.choice(self.img_real_image[class_index])]
         if transforms is not None:
             input_img = [self.transform(Image.open(i))[:3, :, :] for i in img_list[:9]]
+            input_img = torch.cat(input_img, 0)
             real_img = self.transform(Image.open(img_list[9][0]))[:3, :, :]
-        else:
-            input_img = [np.array(Image.open(i))[:, :, :3] for i in img_list[:9]]
-            real_img = np.array(Image.open(img_list[9][0]))[:, :, :3]
-        ##label [hsight,vsight]
-        label = [img_list[9][1], img_list[9][2]]
-
+        label = np.asarray([img_list[9][1], img_list[9][2]], dtype=np.float64)
         return input_img, real_img, label
 
     def __len__(self):  # 这个函数也必须要写，它返回的是数据集的长度，也就是多少张图片，要和loader的长度作区分
